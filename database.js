@@ -139,7 +139,7 @@ const DB = {
   },
 
   // Calcular ingresos totales (admin)
-  getIngresos Totales() {
+  getIngresosTotales() {
     const doctores = this.getTodosLosUsuarios();
     return doctores.reduce((sum, doc) => sum + this.getIngresosPorDoctor(doc.id), 0);
   },
