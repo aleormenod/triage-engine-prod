@@ -1,0 +1,2163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Triage Engine CRM</title>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    .navbar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 18px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .navbar h1 { font-size: 22px; }
+    .navbar-brand { display: flex; flex-direction: column; gap: 4px; }
+    .navbar-subtitle { font-size: 12px; opacity: 0.8; font-weight: 400; }
+    .navbar button {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      margin-left: 10px;
+    }
+    .navbar button:hover { background: rgba(255,255,255,0.25); }
+    .container {
+      display: flex;
+      height: calc(100vh - 70px);
+    }
+    .sidebar {
+      width: 250px;
+      background: white;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    .sidebar-item {
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.2s;
+    }
+    .sidebar-item:hover { background: #f0f4ff; color: #667eea; }
+    .sidebar-item.active { background: #667eea; color: white; }
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px;
+      background: #f5f7fa;
+    }
+    .section { display: none; }
+    .section.active { display: block; }
+    .page-title { font-size: 28px; font-weight: 700; color: #1a202c; margin-bottom: 8px; }
+    .page-subtitle { font-size: 14px; color: #718096; margin-bottom: 28px; }
+    .login-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      margin: 60px auto;
+    }
+    .login-container h1 { color: #333; margin-bottom: 10px; font-size: 28px; }
+    .login-container .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; color: #333; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    .btn {
+      padding: 10px 20px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #5568d3; }
+    .btn.secondary { background: #6c757d; }
+    .btn.danger { background: #dc3545; }
+    .btn.success { background: #28a745; }
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .error { color: #dc3545; font-size: 13px; margin-top: 8px; }
+    .success { color: #28a745; font-size: 13px; margin-top: 8px; }
+    .kpis-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .kpi-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-left: 5px solid;
+    }
+    .kpi-card.primary { border-left-color: #667eea; }
+    .kpi-card.success { border-left-color: #48bb78; }
+    .kpi-card.warning { border-left-color: #f6ad55; }
+    .kpi-card.danger { border-left-color: #f56565; }
+    .kpi-label { font-size: 12px; color: #718096; font-weight: 600; text-transform: uppercase; }
+    .kpi-value { font-size: 28px; font-weight: 700; color: #1a202c; margin-top: 8px; }
+    .filters {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .table-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow-x: auto;
+    }
+    .table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .table th {
+      background: #f0f4ff;
+      padding: 14px;
+      text-align: left;
+      font-weight: 600;
+      color: #4a5568;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .table td { padding: 14px; border-bottom: 1px solid #e2e8f0; }
+    .table tr:hover { background: #f9fafb; }
+    .badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-hot { background: #c6f6d5; color: #22543d; }
+    .badge-warm { background: #feebc8; color: #7c2d12; }
+    .badge-cold { background: #fed7d7; color: #742a2a; }
+    .badge-primary { background: #bee3f8; color: #2c5aa0; }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h2 { font-size: 20px; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .row.full { grid-template-columns: 1fr; }
+    #login-screen { display: block; }
+    #dashboard-content { display: none; }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .chart-container {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .chart-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    .chart-wrapper { width: 100%; height: 300px; }
+  </style>
+</head>
+<body>
+  <!-- SETUP SCREEN (FIRST TIME) -->
+  <div id="setup-screen" style="display: none;">
+    <div class="login-container">
+      <h1>🚀 Triage Engine CRM</h1>
+      <p class="subtitle">Configuración inicial en un click</p>
+
+      <div style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+        <h3 style="color: #667eea; margin-bottom: 10px;">¡Bienvenido a Triage Engine!</h3>
+        <p style="font-size: 14px; line-height: 1.6; color: #555;">
+          Esta es tu primera vez usando el CRM. Completa los datos de tu perfil y estarás listo para gestionar pacientes.
+        </p>
+      </div>
+
+      <form id="setupForm" onsubmit="completarSetup(event)">
+        <div class="form-group">
+          <label>Nombre Completo *</label>
+          <input type="text" id="setup-nombre" placeholder="Ej: Dra. Kristal M. Torrado Rico" required>
+        </div>
+
+        <div class="form-group">
+          <label>Especialidad *</label>
+          <input type="text" id="setup-especialidad" placeholder="Ej: Urología" required>
+        </div>
+
+        <div class="form-group">
+          <label>RUT *</label>
+          <input type="text" id="setup-rut" placeholder="XX.XXX.XXX-X" required>
+        </div>
+
+        <div class="form-group">
+          <label>Procedimiento Principal *</label>
+          <select id="setup-procedimiento" required>
+            <option value="">-- Selecciona --</option>
+            <option value="Vasectomía">Vasectomía</option>
+            <option value="Circuncisión">Circuncisión</option>
+            <option value="Liposucción">Liposucción</option>
+            <option value="Bypass gástrico">Bypass gástrico</option>
+            <option value="Manga gástrica">Manga gástrica</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Correo Profesional *</label>
+          <input type="email" id="setup-correo" required>
+        </div>
+
+        <div class="form-group">
+          <label>Contraseña (para login) *</label>
+          <input type="password" id="setup-password" placeholder="Mínimo 6 caracteres" required>
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; background: #667eea;">✅ Completar Setup</button>
+        <p id="setup-error" class="error"></p>
+      </form>
+
+      <p style="font-size: 12px; color: #999; text-align: center; margin-top: 15px;">
+        ℹ️ Puedes cambiar estos datos después en Configuración
+      </p>
+    </div>
+  </div>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen">
+    <div class="login-container">
+      <h1>CRM Triage Engine</h1>
+      <p class="subtitle">Gestión de pacientes cirugía electiva</p>
+      <form id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>Correo</label>
+          <input type="email" id="email" value="aleormenod@gmail.com" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="password" value="admin123" required>
+        </div>
+        <button type="submit" class="btn" style="width: 100%;">Ingresar</button>
+        <p id="error" class="error"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard-content">
+    <div class="navbar">
+      <div class="navbar-brand">
+        <h1>📊 Triage Engine CRM</h1>
+        <span class="navbar-subtitle">Gestión de Pacientes de Cirugía Electiva</span>
+      </div>
+      <div>
+        <span id="user-email" style="margin-right: 20px;"></span>
+        <button onclick="logout()">Salir</button>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="sidebar-item active" onclick="showSection('dashboard')">📊 Dashboard</div>
+        <div class="sidebar-item" onclick="showSection('pacientes')">👥 Ver Pacientes</div>
+        <div class="sidebar-item" onclick="showSection('nuevo')">➕ Nuevo Paciente</div>
+        <div class="sidebar-item" onclick="showSection('buscar')">🔍 Buscar Paciente</div>
+        <div class="sidebar-item" onclick="showSection('enviar-ordenes')">📤 Enviar Órdenes (Bono PAD)</div>
+        <div class="sidebar-item" onclick="showSection('importar')">📊 Importar Pacientes</div>
+        <div class="sidebar-item" onclick="showSection('documentos')">📄 Documentos</div>
+        <div class="sidebar-item" onclick="showSection('reportes')">📈 Reportes</div>
+        <div class="sidebar-item" onclick="showSection('exportar')">📥 Exportar</div>
+        <hr style="margin: 15px 0; border: none; border-top: 1px solid #ddd;">
+        <div class="sidebar-item" onclick="showSection('configuracion')">⚙️ Configuración</div>
+      </div>
+
+      <!-- MAIN CONTENT -->
+      <div class="main-content">
+        <!-- DASHBOARD SECTION -->
+        <div id="dashboard" class="section active">
+          <div class="page-title">Dashboard</div>
+          <div class="page-subtitle">Resumen ejecutivo — KPIs y métricas principales</div>
+
+          <div class="kpis-grid">
+            <div class="kpi-card primary">
+              <div class="kpi-label">Total Pacientes</div>
+              <div class="kpi-value" id="total-pacientes">0</div>
+            </div>
+            <div class="kpi-card success">
+              <div class="kpi-label">En Pipeline</div>
+              <div class="kpi-value" id="en-pipeline">0</div>
+            </div>
+            <div class="kpi-card warning">
+              <div class="kpi-label">Exámenes OK</div>
+              <div class="kpi-value" id="examenes-ok">0</div>
+            </div>
+            <div class="kpi-card danger">
+              <div class="kpi-label">Operados</div>
+              <div class="kpi-value" id="operados">0</div>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-container">
+              <div class="chart-title">Distribución por Etapa</div>
+              <div id="chart-etapas" class="chart-wrapper"></div>
+            </div>
+            <div class="chart-container">
+              <div class="chart-title">Temperatura de Leads</div>
+              <div id="chart-temperatura" class="chart-wrapper"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VER PACIENTES SECTION -->
+        <div id="pacientes" class="section">
+          <div class="page-title">Gestión de Pacientes</div>
+          <div class="page-subtitle">Lista completa de pacientes con filtros</div>
+
+          <div class="filters">
+            <div class="form-group">
+              <label>Filtrar por Etapa</label>
+              <select id="filtro-etapa" onchange="aplicarFiltros()">
+                <option value="">Todas</option>
+                <option value="Presupuesto solicitado">Presupuesto solicitado</option>
+                <option value="Órdenes enviadas">Órdenes enviadas</option>
+                <option value="Exámenes OK">Exámenes OK</option>
+                <option value="Programado">Programado</option>
+                <option value="Operado">Operado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Filtrar por Temperatura</label>
+              <select id="filtro-temp" onchange="aplicarFiltros()">
+                <option value="">Todas</option>
+                <option value="Caliente">Caliente</option>
+                <option value="Tibio">Tibio</option>
+                <option value="Frío">Frío</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Filtrar por Previsión</label>
+              <select id="filtro-prevision" onchange="aplicarFiltros()">
+                <option value="">Todas</option>
+                <option value="Fonasa">Fonasa</option>
+                <option value="Isapre">Isapre</option>
+                <option value="Dipreca">Dipreca</option>
+                <option value="Capredena">Capredena</option>
+                <option value="Otra">Otra</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Buscar por nombre</label>
+              <input type="text" id="filtro-nombre" placeholder="Ingrese nombre" onchange="aplicarFiltros()">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>RUT</th>
+                  <th>Edad</th>
+                  <th>Previsión</th>
+                  <th>Etapa</th>
+                  <th>Temperatura</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-pacientes"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- NUEVO PACIENTE SECTION -->
+        <div id="nuevo" class="section">
+          <div class="page-title">Agregar Nuevo Paciente</div>
+          <div class="page-subtitle">Ingrese los datos del paciente</div>
+
+          <div class="table-container">
+            <form id="formNuevoPaciente" onsubmit="guardarPaciente(event)">
+              <div class="row">
+                <div class="form-group">
+                  <label>Nombre Completo *</label>
+                  <input type="text" id="np-nombre" required>
+                </div>
+                <div class="form-group">
+                  <label>RUT *</label>
+                  <input type="text" id="np-rut" placeholder="12.345.678-9" required>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="form-group">
+                  <label>Edad *</label>
+                  <input type="number" id="np-edad" required>
+                </div>
+                <div class="form-group">
+                  <label>Teléfono *</label>
+                  <input type="tel" id="np-telefono" required>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="form-group">
+                  <label>Correo *</label>
+                  <input type="email" id="np-correo" required>
+                </div>
+                <div class="form-group">
+                  <label>Previsión *</label>
+                  <select id="np-prevision" required>
+                    <option value="">Seleccionar</option>
+                    <option value="Fonasa">Fonasa</option>
+                    <option value="Isapre">Isapre</option>
+                    <option value="Dipreca">Dipreca</option>
+                    <option value="Capredena">Capredena</option>
+                    <option value="Otra">Otra</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="form-group">
+                  <label>¿Tiene HTA?</label>
+                  <select id="np-hta">
+                    <option value="No">No</option>
+                    <option value="Sí">Sí</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>¿Tiene DM2?</label>
+                  <select id="np-dm2">
+                    <option value="No">No</option>
+                    <option value="Sí">Sí</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row full">
+                <div class="form-group">
+                  <label>Observaciones</label>
+                  <textarea id="np-obs" rows="4"></textarea>
+                </div>
+              </div>
+
+              <div class="btn-group">
+                <button type="submit" class="btn success">Guardar Paciente</button>
+                <button type="reset" class="btn secondary">Limpiar</button>
+              </div>
+              <p id="np-message"></p>
+            </form>
+          </div>
+        </div>
+
+        <!-- BUSCAR PACIENTE SECTION -->
+        <div id="buscar" class="section">
+          <div class="page-title">Buscar y Editar Paciente</div>
+          <div class="page-subtitle">Ingrese el RUT del paciente a buscar</div>
+
+          <div class="table-container">
+            <div class="form-group" style="margin-bottom: 20px;">
+              <label>RUT del paciente</label>
+              <input type="text" id="buscar-rut" placeholder="12.345.678-9">
+              <button class="btn" style="margin-top: 10px;" onclick="buscarPaciente()">Buscar</button>
+            </div>
+
+            <div id="resultado-busqueda" style="display: none;">
+              <h3 style="margin-bottom: 20px;">Información del Paciente</h3>
+              <form id="formEditarPaciente" onsubmit="guardarEdicionPaciente(event)">
+                <div class="row">
+                  <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="ed-nombre" required>
+                  </div>
+                  <div class="form-group">
+                    <label>RUT</label>
+                    <input type="text" id="ed-rut" disabled>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="form-group">
+                    <label>Edad</label>
+                    <input type="number" id="ed-edad" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="ed-telefono" required>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="form-group">
+                    <label>Correo</label>
+                    <input type="email" id="ed-correo" required>
+                  </div>
+                  <div class="form-group">
+                    <label>Etapa Actual</label>
+                    <select id="ed-etapa" onchange="actualizarEstado()">
+                      <option value="Presupuesto solicitado">Presupuesto solicitado</option>
+                      <option value="Órdenes enviadas">Órdenes enviadas</option>
+                      <option value="Exámenes OK">Exámenes OK</option>
+                      <option value="Programado">Programado</option>
+                      <option value="Operado">Operado</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="form-group">
+                    <label>Temperatura</label>
+                    <select id="ed-temp">
+                      <option value="Caliente">Caliente</option>
+                      <option value="Tibio">Tibio</option>
+                      <option value="Frío">Frío</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Previsión</label>
+                    <input type="text" id="ed-prevision" required>
+                  </div>
+                </div>
+
+                <div class="row full">
+                  <div class="form-group">
+                    <label>Notas de Seguimiento</label>
+                    <textarea id="ed-notas" rows="4" placeholder="Agregue aquí el historial de contacto"></textarea>
+                  </div>
+                </div>
+
+                <div class="btn-group">
+                  <button type="submit" class="btn success">Guardar Cambios</button>
+                  <button type="button" class="btn secondary" onclick="limpiarBusqueda()">Cancelar</button>
+                </div>
+                <p id="ed-message"></p>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- ENVIAR ÓRDENES SECTION (CON BONO PAD INTEGRADO) -->
+        <div id="enviar-ordenes" class="section">
+          <div class="page-title">Enviar Órdenes</div>
+          <div class="page-subtitle">Selecciona paciente y prestación Bono PAD para generar orden</div>
+
+          <div class="table-container">
+            <form id="formEnviarOrdenes" onsubmit="handleEnviarOrdenesBonoPad(event)">
+              <!-- PASO 1: BÚSQUEDA DE PACIENTE -->
+              <div style="margin-bottom: 25px;">
+                <h4 style="margin-bottom: 15px; color: #333;">📋 Paso 1: Buscar Paciente</h4>
+                <div class="row">
+                  <div class="form-group">
+                    <label>Paciente (RUT o nombre)</label>
+                    <input type="text" id="eo-buscar-pad" placeholder="12.345.678-9 o Nombre" required>
+                    <button type="button" class="btn secondary" style="margin-top: 10px;" onclick="buscarPacienteParaBonoPad()">🔍 Buscar</button>
+                  </div>
+                </div>
+                <div id="eo-resultado-paciente" style="display: none; background: #f0f4ff; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                  <p><strong id="eo-info-paciente"></strong></p>
+                </div>
+              </div>
+
+              <!-- PASO 2: SELECCIÓN DE PRESTACIÓN BONO PAD -->
+              <div id="eo-seccion-prestacion" style="display: none; margin-bottom: 25px;">
+                <h4 style="margin-bottom: 15px; color: #333;">🏥 Paso 2: Seleccionar Prestación Bono PAD</h4>
+                <div class="row">
+                  <div class="form-group">
+                    <label>Especialidad</label>
+                    <select id="eo-especialidad-pad" onchange="cargarPrestacionesBonoPad()">
+                      <option value="">-- Selecciona especialidad --</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Prestación</label>
+                    <select id="eo-prestacion-pad" onchange="cargarDiagnosticoBonoPad()">
+                      <option value="">-- Selecciona prestación --</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PASO 3: SELECCIÓN DE DIAGNÓSTICO -->
+              <div id="eo-seccion-diagnostico" style="display: none; margin-bottom: 25px;">
+                <h4 style="margin-bottom: 15px; color: #333;">📌 Paso 3: Seleccionar Diagnóstico</h4>
+                <div class="row">
+                  <div class="form-group">
+                    <label>Diagnóstico CIE-10</label>
+                    <select id="eo-diagnostico-pad">
+                      <option value="">-- Selecciona diagnóstico --</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PASO 4: EXÁMENES CALCULADOS -->
+              <div id="eo-seccion-examenes" style="display: none; margin-bottom: 25px;">
+                <h4 style="margin-bottom: 15px; color: #28a745;">✅ Paso 4: Exámenes Calculados (Automático)</h4>
+                <div style="background: #f0f4ff; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+                  <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                    Sistema calcula automáticamente según:
+                    <br/>• Edad del paciente
+                    <br/>• HTA y DM2
+                    <br/>• Requisitos de la prestación Bono PAD
+                  </p>
+                  <div id="eo-lista-examenes" style="background: white; padding: 12px; border-radius: 4px; border-left: 3px solid #28a745;">
+                    <div id="eo-examenes-container"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BOTONES DE ACCIÓN -->
+              <div id="eo-seccion-botones" style="display: none;">
+                <div class="btn-group">
+                  <button type="submit" class="btn success">📤 Generar Orden</button>
+                  <button type="button" class="btn secondary" onclick="limpiarOrdenesBonoPad()">Cancelar</button>
+                </div>
+              </div>
+
+              <p id="eo-message-pad"></p>
+            </form>
+          </div>
+        </div>
+
+        <!-- IMPORTAR PACIENTES SECTION -->
+        <div id="importar" class="section">
+          <div class="page-title">Importar Pacientes</div>
+          <div class="page-subtitle">Carga múltiples pacientes desde un archivo CSV o pegando datos</div>
+
+          <div class="table-container">
+            <div class="form-group" style="margin-bottom: 20px;">
+              <label>Opción 1: Cargar archivo CSV</label>
+              <input type="file" id="imp-archivo" accept=".csv,.xlsx">
+              <button type="button" class="btn secondary" style="margin-top: 10px;" onclick="procesarArchivoImportacion()">Cargar Archivo</button>
+            </div>
+
+            <div style="text-align: center; margin: 20px 0;">
+              <p style="color: #999;">— O —</p>
+            </div>
+
+            <div class="form-group">
+              <label>Opción 2: Pegar datos desde Spreadsheet</label>
+              <textarea id="imp-datos" rows="6" placeholder="Pega aquí los datos copiados desde Google Sheets (nombre, RUT, edad, previsión, etc.)"></textarea>
+              <button type="button" class="btn secondary" style="margin-top: 10px;" onclick="procesarDatosImportacion()">Importar Datos</button>
+            </div>
+
+            <p id="imp-message"></p>
+
+            <div id="imp-preview" style="display: none; margin-top: 20px;">
+              <h3>Vista previa de importación</h3>
+              <div class="table-container" style="margin-top: 15px;">
+                <table class="table" id="tabla-preview-importacion">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>RUT</th>
+                      <th>Edad</th>
+                      <th>Previsión</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-preview-importacion"></tbody>
+                </table>
+              </div>
+              <div class="btn-group" style="margin-top: 15px;">
+                <button type="button" class="btn success" onclick="confirmarImportacion()">✅ Confirmar Importación</button>
+                <button type="button" class="btn secondary" onclick="limpiarImportacion()">❌ Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DOCUMENTOS ENVIADOS SECTION -->
+        <div id="documentos" class="section">
+          <div class="page-title">Documentos Enviados</div>
+          <div class="page-subtitle">Historial de órdenes y documentos enviados a pacientes</div>
+
+          <div class="table-container">
+            <div class="table-container" style="margin-bottom: 20px;">
+              <table class="table" id="tabla-documentos">
+                <thead>
+                  <tr>
+                    <th>Paciente</th>
+                    <th>Tipo de Documento</th>
+                    <th>Fecha Envío</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-documentos"></tbody>
+              </table>
+            </div>
+
+            <p id="doc-message" style="color: #999;">Los documentos enviados aparecerán aquí</p>
+          </div>
+        </div>
+
+        <!-- CONFIGURACIÓN SECTION -->
+        <div id="configuracion" class="section">
+          <div class="page-title">Configuración del CRM</div>
+          <div class="page-subtitle">Personaliza tu perfil, branding y parámetros clínicos</div>
+
+          <div class="table-container">
+            <form id="formConfiguracion" onsubmit="guardarConfiguracion(event)">
+              <h3 style="margin-bottom: 20px; color: #333;">Datos Profesionales</h3>
+              <div class="row">
+                <div class="form-group">
+                  <label>Nombre Completo</label>
+                  <input type="text" id="cfg-nombre" required>
+                </div>
+                <div class="form-group">
+                  <label>Especialidad</label>
+                  <input type="text" id="cfg-especialidad" required>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="form-group">
+                  <label>RUT</label>
+                  <input type="text" id="cfg-rut" placeholder="XX.XXX.XXX-X" required>
+                </div>
+                <div class="form-group">
+                  <label>Procedimiento Principal</label>
+                  <select id="cfg-procedimiento">
+                    <option value="Vasectomía">Vasectomía</option>
+                    <option value="Circuncisión">Circuncisión</option>
+                    <option value="Liposucción">Liposucción</option>
+                    <option value="Bypass gástrico">Bypass gástrico</option>
+                    <option value="Manga gástrica">Manga gástrica</option>
+                    <option value="Otra">Otra</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="form-group">
+                  <label>Correo Profesional</label>
+                  <input type="email" id="cfg-correo" required>
+                </div>
+                <div class="form-group">
+                  <label>Teléfono</label>
+                  <input type="tel" id="cfg-telefono" required>
+                </div>
+              </div>
+
+              <h3 style="margin-top: 30px; margin-bottom: 20px; color: #333;">Branding y Firma</h3>
+              <div class="row">
+                <div class="form-group">
+                  <label>Firma Digital</label>
+                  <input type="text" id="cfg-firma" placeholder="Dra. Kristal M. Torrado R.">
+                </div>
+                <div class="form-group">
+                  <label>Logo/Emoji</label>
+                  <input type="text" id="cfg-logo" placeholder="🏥" maxlength="5">
+                </div>
+              </div>
+
+              <h3 style="margin-top: 30px; margin-bottom: 20px; color: #333;">Parámetros Clínicos</h3>
+              <div class="row">
+                <div class="form-group">
+                  <label>EKG requerido si edad >= (años)</label>
+                  <input type="number" id="cfg-edad-ekg" value="40" required>
+                </div>
+                <div class="form-group">
+                  <label>Exámenes Base (separados por comas)</label>
+                  <input type="text" id="cfg-examenes" placeholder="Hemograma, TP - TTP, Glicemia, Creatinina">
+                </div>
+              </div>
+
+              <div class="btn-group">
+                <button type="submit" class="btn success">💾 Guardar Configuración</button>
+                <button type="button" class="btn secondary" onclick="resetearConfiguracion()">🔄 Restaurar Valores</button>
+              </div>
+              <p id="cfg-message"></p>
+            </form>
+          </div>
+        </div>
+
+        <!-- REPORTES SECTION -->
+        <div id="reportes" class="section">
+          <div class="page-title">Reportes Detallados</div>
+          <div class="page-subtitle">Análisis por categoría</div>
+
+          <div class="kpis-grid">
+            <div class="kpi-card primary">
+              <div class="kpi-label">Fonasa</div>
+              <div class="kpi-value" id="rep-fonasa">0</div>
+            </div>
+            <div class="kpi-card success">
+              <div class="kpi-label">Isapre</div>
+              <div class="kpi-value" id="rep-isapre">0</div>
+            </div>
+            <div class="kpi-card warning">
+              <div class="kpi-label">Edad Promedio</div>
+              <div class="kpi-value" id="rep-edad">0 años</div>
+            </div>
+            <div class="kpi-card danger">
+              <div class="kpi-label">Tasa de Conversión</div>
+              <div class="kpi-value" id="rep-conversion">0%</div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <h3 style="margin-bottom: 20px;">Resumen por Estado</h3>
+            <table class="table" id="tabla-resumen-estado"></table>
+          </div>
+        </div>
+
+        <!-- EXPORTAR SECTION -->
+        <div id="exportar" class="section">
+          <div class="page-title">Exportar Datos</div>
+          <div class="page-subtitle">Descarga reportes en diferentes formatos</div>
+
+          <div class="table-container">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+              <button class="btn success" onclick="exportarPDF()" style="padding: 20px; font-size: 16px;">
+                📄 Descargar PDF
+              </button>
+              <button class="btn success" onclick="exportarExcel()" style="padding: 20px; font-size: 16px;">
+                📊 Descargar Excel
+              </button>
+              <button class="btn success" onclick="exportarCSV()" style="padding: 20px; font-size: 16px;">
+                📋 Descargar CSV
+              </button>
+              <button class="btn success" onclick="imprimirReporte()" style="padding: 20px; font-size: 16px;">
+                🖨️ Imprimir Reporte
+              </button>
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: #f0f4ff; border-radius: 8px;">
+              <h3 style="margin-bottom: 10px;">ℹ️ Información de Exportación</h3>
+              <p style="font-size: 13px; color: #666; line-height: 1.6;">
+                • <strong>PDF:</strong> Reporte visual con gráficos y tabla de pacientes<br>
+                • <strong>Excel:</strong> Datos completos para análisis en hojas de cálculo<br>
+                • <strong>CSV:</strong> Formato compatible con cualquier programa<br>
+                • <strong>Imprimir:</strong> Vista optimizada para impresora
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    google.charts.load('current', {'packages':['corechart', 'bar']});
+    google.charts.setOnLoadCallback(inicializar);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONFIGURACIÓN POR CLIENTE (MULTI-CLIENTE)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function cargarConfiguracionClienteActivo() {
+      const clienteActivo = localStorage.getItem('clienteActivo');
+
+      if (clienteActivo) {
+        const clientesInstalados = JSON.parse(localStorage.getItem('clientesInstalados') || '{}');
+        if (clientesInstalados[clienteActivo]) {
+          return clientesInstalados[clienteActivo];
+        }
+      }
+
+      // Fallback a configuración por defecto
+      return JSON.parse(localStorage.getItem('configuracionCliente')) || {
+        nombre: 'Dra. Kristal M. Torrado Rico',
+        especialidad: 'Uróloga',
+        rut: '26.206.551-0',
+        telefono: '+56912345678',
+        correo: 'dra@clinica.cl',
+        procedimiento: 'Vasectomía',
+        logo: '🩺',
+        firma: 'Dra. Kristal M. Torrado R.',
+        examenesBase: ['Hemograma', 'TP - TTP', 'Glicemia', 'Creatinina']
+      };
+    }
+
+    let configuracionCliente = cargarConfiguracionClienteActivo();
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // LÓGICA CLÍNICA - EXÁMENES POR DIAGNÓSTICO
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const examenesPorDiagnostico = {
+      'Vasectomía': {
+        exames: ['Hemograma', 'TP - TTP', 'Glicemia', 'Creatinina'],
+        requiereEKG: false,
+        requiereEcocardiograma: false,
+        requiereRxPecho: false
+      },
+      'Circuncisión': {
+        exames: ['Hemograma', 'TP - TTP', 'Glicemia'],
+        requiereEKG: false,
+        requiereEcocardiograma: false,
+        requiereRxPecho: false
+      },
+      'Liposucción': {
+        exames: ['Hemograma', 'TP - TTP', 'Glicemia', 'Creatinina', 'Glucosa'],
+        requiereEKG: true,
+        requiereEcocardiograma: false,
+        requiereRxPecho: true
+      },
+      'Bypass gástrico': {
+        exames: ['Hemograma', 'TP - TTP', 'Glicemia', 'Creatinina', 'Albumina', 'Hierro', 'B12'],
+        requiereEKG: true,
+        requiereEcocardiograma: true,
+        requiereRxPecho: true
+      },
+      'Manga gástrica': {
+        exames: ['Hemograma', 'TP - TTP', 'Glicemia', 'Creatinina', 'Albumina'],
+        requiereEKG: true,
+        requiereEcocardiograma: false,
+        requiereRxPecho: true
+      }
+    };
+
+    function obtenerExamenesPaciente(procedimiento, edad, tieneHTA, tieneDM2) {
+      let examenes = examenesPorDiagnostico[procedimiento]?.exames || configuracionCliente.examenesBase;
+      const config = examenesPorDiagnostico[procedimiento] || {};
+
+      if (edad >= 40 || tieneHTA === 'Sí') examenes.push('EKG');
+      if (tieneDM2 === 'Sí') examenes.push('HbA1c');
+      if (config.requiereEKG && !examenes.includes('EKG')) examenes.push('EKG');
+      if (config.requiereRxPecho && !examenes.includes('Rx Tórax')) examenes.push('Rx Tórax');
+      if (config.requiereEcocardiograma && !examenes.includes('Ecocardiograma')) examenes.push('Ecocardiograma');
+
+      return [...new Set(examenes)];
+    }
+
+    // DATOS BASE
+    let pacientes = JSON.parse(localStorage.getItem('pacientes')) || [
+      { rut: '15.234.567-8', nombre: 'Juan Pérez', edad: 45, prevision: 'Isapre', correo: 'juan@email.com', telefono: '+56912345678', etapa: 'Órdenes enviadas', temperatura: 'Tibio', hta: 'No', dm2: 'No', obs: 'Paciente confirmado', notas: '[2026-06-19] Contacto inicial\n[2026-06-18] Envío de órdenes' },
+      { rut: '18.765.432-9', nombre: 'Maria González', edad: 38, prevision: 'Fonasa', correo: 'maria@email.com', telefono: '+56987654321', etapa: 'Exámenes OK', temperatura: 'Caliente', hta: 'No', dm2: 'No', obs: 'Muy interesada', notas: '[2026-06-19] Exámenes completos\n[2026-06-18] Llamada de seguimiento' }
+    ];
+
+    function inicializar() {
+      cargarConfiguracion();
+      cargarDashboard();
+      cargarPacientes();
+      cargarReportes();
+      cargarDocumentos();
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('error');
+
+      // Permitir login default o login personalizado
+      const usuarioSetup = JSON.parse(localStorage.getItem('usuarioSetup') || '{}');
+      const esLoginValido = (email === 'aleormenod@gmail.com' && password === 'admin123') ||
+                            (email === usuarioSetup.email && password === usuarioSetup.password);
+
+      if (esLoginValido) {
+        localStorage.setItem('usuario', email);
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard-content').style.display = 'block';
+        document.getElementById('user-email').textContent = email;
+        inicializar();
+      } else {
+        errorDiv.textContent = 'Credenciales inválidas';
+      }
+    }
+
+    function logout() {
+      document.getElementById('login-screen').style.display = 'block';
+      document.getElementById('dashboard-content').style.display = 'none';
+      localStorage.removeItem('usuario');
+    }
+
+    function showSection(section) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+      document.getElementById(section).classList.add('active');
+      event.target.classList.add('active');
+
+      if (section === 'pacientes') cargarPacientes();
+      else if (section === 'reportes') cargarReportes();
+    }
+
+    function cargarDashboard() {
+      const etapas = {};
+      const temperaturas = { Caliente: 0, Tibio: 0, Frío: 0 };
+
+      pacientes.forEach(p => {
+        etapas[p.etapa] = (etapas[p.etapa] || 0) + 1;
+        temperaturas[p.temperatura]++;
+      });
+
+      document.getElementById('total-pacientes').textContent = pacientes.length;
+      document.getElementById('en-pipeline').textContent = pacientes.filter(p => ['Órdenes enviadas', 'Exámenes OK'].includes(p.etapa)).length;
+      document.getElementById('examenes-ok').textContent = pacientes.filter(p => p.etapa === 'Exámenes OK').length;
+      document.getElementById('operados').textContent = pacientes.filter(p => p.etapa === 'Operado').length;
+
+      // Gráfico Etapas
+      const etapasData = google.visualization.arrayToDataTable([
+        ['Etapa', 'Pacientes'],
+        ...Object.entries(etapas).map(([k, v]) => [k, v])
+      ]);
+      new google.visualization.PieChart(document.getElementById('chart-etapas')).draw(etapasData, {
+        pieHole: 0.4,
+        colors: ['#667eea', '#764ba2', '#48bb78', '#f6ad55', '#f56565']
+      });
+
+      // Gráfico Temperatura
+      const tempData = google.visualization.arrayToDataTable([
+        ['Temperatura', 'Pacientes'],
+        ['Caliente', temperaturas.Caliente],
+        ['Tibio', temperaturas.Tibio],
+        ['Frío', temperaturas.Frío]
+      ]);
+      new google.visualization.PieChart(document.getElementById('chart-temperatura')).draw(tempData, {
+        colors: ['#f56565', '#f6ad55', '#cbd5e0']
+      });
+
+    }
+
+    function cargarPacientes() {
+      aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+      const filtroEtapa = document.getElementById('filtro-etapa').value;
+      const filtroTemp = document.getElementById('filtro-temp').value;
+      const filtroPrevision = document.getElementById('filtro-prevision').value;
+      const filtroNombre = document.getElementById('filtro-nombre').value.toLowerCase();
+
+      const pacientesFiltrados = pacientes.filter(p =>
+        (!filtroEtapa || p.etapa === filtroEtapa) &&
+        (!filtroTemp || p.temperatura === filtroTemp) &&
+        (!filtroPrevision || p.prevision === filtroPrevision) &&
+        (!filtroNombre || p.nombre.toLowerCase().includes(filtroNombre))
+      );
+
+      const tbody = document.getElementById('tbody-pacientes');
+      tbody.innerHTML = '';
+
+      pacientesFiltrados.slice(0, 10).forEach(p => {
+        const tr = document.createElement('tr');
+        const tempClass = p.temperatura === 'Caliente' ? 'badge-hot' : p.temperatura === 'Tibio' ? 'badge-warm' : 'badge-cold';
+        tr.innerHTML = `
+          <td><strong>${p.nombre}</strong></td>
+          <td>${p.rut}</td>
+          <td>${p.edad}</td>
+          <td>${p.prevision}</td>
+          <td><span class="badge badge-primary">${p.etapa}</span></td>
+          <td><span class="badge ${tempClass}">${p.temperatura}</span></td>
+          <td>
+            <button class="btn" style="padding: 5px 10px; font-size: 12px;" onclick="abrirEdicion('${p.rut}')">✏️ Editar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function guardarPaciente(e) {
+      e.preventDefault();
+      const nuevoPaciente = {
+        rut: document.getElementById('np-rut').value,
+        nombre: document.getElementById('np-nombre').value,
+        edad: parseInt(document.getElementById('np-edad').value),
+        prevision: document.getElementById('np-prevision').value,
+        correo: document.getElementById('np-correo').value,
+        telefono: document.getElementById('np-telefono').value,
+        hta: document.getElementById('np-hta').value,
+        dm2: document.getElementById('np-dm2').value,
+        obs: document.getElementById('np-obs').value,
+        etapa: 'Presupuesto solicitado',
+        temperatura: 'Tibio',
+        notas: `[${new Date().toLocaleDateString()}] Nuevo paciente agregado`
+      };
+
+      const existente = pacientes.find(p => p.rut === nuevoPaciente.rut);
+      if (existente) {
+        document.getElementById('np-message').innerHTML = '<p class="error">⚠️ Este RUT ya existe</p>';
+        return;
+      }
+
+      pacientes.push(nuevoPaciente);
+      localStorage.setItem('pacientes', JSON.stringify(pacientes));
+      document.getElementById('formNuevoPaciente').reset();
+      document.getElementById('np-message').innerHTML = '<p class="success">✅ Paciente guardado exitosamente</p>';
+      setTimeout(() => {
+        document.getElementById('np-message').innerHTML = '';
+        cargarDashboard();
+      }, 2000);
+    }
+
+    function buscarPaciente() {
+      const rut = document.getElementById('buscar-rut').value;
+      const paciente = pacientes.find(p => p.rut === rut);
+
+      if (!paciente) {
+        alert('Paciente no encontrado');
+        return;
+      }
+
+      document.getElementById('resultado-busqueda').style.display = 'block';
+      document.getElementById('ed-nombre').value = paciente.nombre;
+      document.getElementById('ed-rut').value = paciente.rut;
+      document.getElementById('ed-edad').value = paciente.edad;
+      document.getElementById('ed-telefono').value = paciente.telefono;
+      document.getElementById('ed-correo').value = paciente.correo;
+      document.getElementById('ed-etapa').value = paciente.etapa;
+      document.getElementById('ed-temp').value = paciente.temperatura;
+      document.getElementById('ed-prevision').value = paciente.prevision;
+      document.getElementById('ed-notas').value = paciente.notas || '';
+    }
+
+    function limpiarBusqueda() {
+      document.getElementById('resultado-busqueda').style.display = 'none';
+      document.getElementById('buscar-rut').value = '';
+      document.getElementById('formEditarPaciente').reset();
+      document.getElementById('ed-message').innerHTML = '';
+    }
+
+    function actualizarEstado() {
+      const rut = document.getElementById('ed-rut').value;
+      const paciente = pacientes.find(p => p.rut === rut);
+      if (paciente) {
+        paciente.etapa = document.getElementById('ed-etapa').value;
+      }
+    }
+
+    function guardarEdicionPaciente(e) {
+      e.preventDefault();
+      const rut = document.getElementById('ed-rut').value;
+      const paciente = pacientes.find(p => p.rut === rut);
+
+      if (!paciente) return;
+
+      paciente.nombre = document.getElementById('ed-nombre').value;
+      paciente.edad = parseInt(document.getElementById('ed-edad').value);
+      paciente.telefono = document.getElementById('ed-telefono').value;
+      paciente.correo = document.getElementById('ed-correo').value;
+      paciente.etapa = document.getElementById('ed-etapa').value;
+      paciente.temperatura = document.getElementById('ed-temp').value;
+      paciente.prevision = document.getElementById('ed-prevision').value;
+      paciente.notas = document.getElementById('ed-notas').value;
+
+      localStorage.setItem('pacientes', JSON.stringify(pacientes));
+      document.getElementById('ed-message').innerHTML = '<p class="success">✅ Cambios guardados</p>';
+      setTimeout(() => {
+        limpiarBusqueda();
+        cargarDashboard();
+        cargarPacientes();
+      }, 1500);
+    }
+
+    function abrirEdicion(rut) {
+      document.getElementById('buscar-rut').value = rut;
+      buscarPaciente();
+      showSection('buscar');
+    }
+
+    function cargarReportes() {
+      const previsiones = {};
+      let sumaEdad = 0;
+
+      pacientes.forEach(p => {
+        previsiones[p.prevision] = (previsiones[p.prevision] || 0) + 1;
+        sumaEdad += p.edad;
+      });
+
+      document.getElementById('rep-fonasa').textContent = previsiones['Fonasa'] || 0;
+      document.getElementById('rep-isapre').textContent = previsiones['Isapre'] || 0;
+      document.getElementById('rep-edad').textContent = pacientes.length > 0 ? Math.round(sumaEdad / pacientes.length) + ' años' : '0 años';
+
+      const operados = pacientes.filter(p => p.etapa === 'Operado').length;
+      const tasa = pacientes.length > 0 ? Math.round((operados / pacientes.length) * 100) : 0;
+      document.getElementById('rep-conversion').textContent = tasa + '%';
+
+      // Tabla resumen por estado
+      const etapas = {};
+      pacientes.forEach(p => etapas[p.etapa] = (etapas[p.etapa] || 0) + 1);
+
+      const tablita = document.getElementById('tabla-resumen-estado');
+      tablita.innerHTML = '<thead><tr><th>Etapa</th><th>Cantidad</th><th>%</th></tr></thead><tbody>';
+      Object.entries(etapas).forEach(([etapa, cantidad]) => {
+        const pct = Math.round((cantidad / pacientes.length) * 100);
+        tablita.innerHTML += `<tr><td>${etapa}</td><td>${cantidad}</td><td>${pct}%</td></tr>`;
+      });
+      tablita.innerHTML += '</tbody>';
+    }
+
+    function exportarPDF() {
+      const element = document.createElement('div');
+      element.innerHTML = `
+        <h1>Reporte CRM Triage Engine</h1>
+        <p>Fecha: ${new Date().toLocaleDateString()}</p>
+        <h2>Resumen Ejecutivo</h2>
+        <p>Total Pacientes: ${pacientes.length}</p>
+        <p>En Pipeline: ${pacientes.filter(p => ['Órdenes enviadas', 'Exámenes OK'].includes(p.etapa)).length}</p>
+        <p>Operados: ${pacientes.filter(p => p.etapa === 'Operado').length}</p>
+        <h2>Detalle de Pacientes</h2>
+        <table border="1" cellpadding="10" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <th>Nombre</th>
+            <th>RUT</th>
+            <th>Edad</th>
+            <th>Previsión</th>
+            <th>Etapa</th>
+            <th>Temperatura</th>
+          </tr>
+          ${pacientes.map(p => `<tr><td>${p.nombre}</td><td>${p.rut}</td><td>${p.edad}</td><td>${p.prevision}</td><td>${p.etapa}</td><td>${p.temperatura}</td></tr>`).join('')}
+        </table>
+      `;
+
+      const opt = { margin: 10, filename: 'reporte-crm.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { orientation: 'portrait' } };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    function exportarExcel() {
+      const data = [
+        ['Nombre', 'RUT', 'Edad', 'Previsión', 'Etapa', 'Temperatura', 'Correo', 'Teléfono'],
+        ...pacientes.map(p => [p.nombre, p.rut, p.edad, p.prevision, p.etapa, p.temperatura, p.correo, p.telefono])
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Pacientes');
+      XLSX.writeFile(wb, 'reporte-crm.xlsx');
+    }
+
+    function exportarCSV() {
+      const csv = [
+        ['Nombre', 'RUT', 'Edad', 'Previsión', 'Etapa', 'Temperatura', 'Correo', 'Teléfono'],
+        ...pacientes.map(p => [p.nombre, p.rut, p.edad, p.prevision, p.etapa, p.temperatura, p.correo, p.telefono])
+      ].map(row => row.join(',')).join('\n');
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'reporte-crm.csv';
+      a.click();
+    }
+
+    function imprimirReporte() {
+      const ventana = window.open('', '', 'height=600, width=800');
+      ventana.document.write(`
+        <h1>Reporte CRM Triage Engine</h1>
+        <p>Fecha: ${new Date().toLocaleDateString()}</p>
+        <h2>Resumen</h2>
+        <p>Total: ${pacientes.length} | En Pipeline: ${pacientes.filter(p => ['Órdenes enviadas', 'Exámenes OK'].includes(p.etapa)).length} | Operados: ${pacientes.filter(p => p.etapa === 'Operado').length}</p>
+        <table border="1" cellpadding="10" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <th>Nombre</th><th>RUT</th><th>Edad</th><th>Previsión</th><th>Etapa</th><th>Temperatura</th>
+          </tr>
+          ${pacientes.map(p => `<tr><td>${p.nombre}</td><td>${p.rut}</td><td>${p.edad}</td><td>${p.prevision}</td><td>${p.etapa}</td><td>${p.temperatura}</td></tr>`).join('')}
+        </table>
+      `);
+      ventana.document.close();
+      ventana.print();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ENVIAR ÓRDENES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function buscarPacienteEnOrdenes() {
+      const buscar = document.getElementById('eo-buscar').value.toLowerCase();
+      const paciente = pacientes.find(p =>
+        p.rut.includes(buscar) || p.nombre.toLowerCase().includes(buscar)
+      );
+
+      if (!paciente) {
+        document.getElementById('eo-message').innerHTML = '<p class="error">❌ Paciente no encontrado</p>';
+        return;
+      }
+
+      document.getElementById('eo-paciente-nombre').textContent = paciente.nombre + ' (RUT: ' + paciente.rut + ')';
+      document.getElementById('resultado-ordenes').style.display = 'block';
+      document.getElementById('eo-message').innerHTML = '';
+      document.getElementById('eo-presupuesto').checked = false;
+      document.getElementById('eo-examenes').checked = false;
+      document.getElementById('eo-ekg').checked = false;
+    }
+
+    function handleEnviarOrdenes(e) {
+      e.preventDefault();
+      const presupuesto = document.getElementById('eo-presupuesto').checked;
+      const examenes = document.getElementById('eo-examenes').checked;
+      const ekg = document.getElementById('eo-ekg').checked;
+
+      if (!presupuesto && !examenes && !ekg) {
+        document.getElementById('eo-message').innerHTML = '<p class="error">⚠️ Debes seleccionar al menos un documento</p>';
+        return;
+      }
+
+      const buscar = document.getElementById('eo-buscar').value.toLowerCase();
+      const paciente = pacientes.find(p =>
+        p.rut.includes(buscar) || p.nombre.toLowerCase().includes(buscar)
+      );
+
+      if (!paciente) return;
+
+      let documentosEnviados = JSON.parse(localStorage.getItem('documentosEnviados')) || [];
+      const ahora = new Date().toLocaleString('es-CL');
+
+      // Calcular exámenes según lógica clínica
+      const examenesCalculados = obtenerExamenesPaciente(
+        configuracionCliente.procedimiento,
+        paciente.edad,
+        paciente.hta,
+        paciente.dm2
+      );
+
+      if (presupuesto) {
+        documentosEnviados.push({
+          paciente: paciente.nombre,
+          rut: paciente.rut,
+          tipo: 'Orden de Presupuesto',
+          fecha: ahora,
+          estado: 'Enviado',
+          contenido: generarOrdenPresupuesto(paciente)
+        });
+      }
+      if (examenes) {
+        documentosEnviados.push({
+          paciente: paciente.nombre,
+          rut: paciente.rut,
+          tipo: 'Orden de Exámenes',
+          fecha: ahora,
+          estado: 'Enviado',
+          examenes: examenesCalculados,
+          contenido: generarOrdenExamenes(paciente, examenesCalculados)
+        });
+      }
+      if (ekg) {
+        documentosEnviados.push({
+          paciente: paciente.nombre,
+          rut: paciente.rut,
+          tipo: 'Orden EKG',
+          fecha: ahora,
+          estado: 'Enviado',
+          contenido: generarOrdenEKG(paciente)
+        });
+      }
+
+      localStorage.setItem('documentosEnviados', JSON.stringify(documentosEnviados));
+
+      paciente.etapa = 'Órdenes enviadas';
+      localStorage.setItem('pacientes', JSON.stringify(pacientes));
+
+      document.getElementById('eo-message').innerHTML = '<p class="success">✅ Órdenes generadas exitosamente (lista para enviar por WhatsApp/Email)</p>';
+      setTimeout(() => {
+        limpiarOrdenes();
+        cargarDocumentos();
+      }, 2000);
+    }
+
+    function generarOrdenPresupuesto(paciente) {
+      return `
+${configuracionCliente.nombre}
+${configuracionCliente.especialidad}
+RUT: ${configuracionCliente.rut}
+
+ORDEN DE PRESUPUESTO
+
+Paciente: ${paciente.nombre}
+RUT: ${paciente.rut}
+Edad: ${paciente.edad} años
+Previsión: ${paciente.prevision}
+Teléfono: ${paciente.telefono}
+Correo: ${paciente.correo}
+
+Procedimiento: ${configuracionCliente.procedimiento}
+Diagnóstico: [Completar según evaluación]
+
+---
+${configuracionCliente.firma}
+${configuracionCliente.especialidad}
+RUT: ${configuracionCliente.rut}
+
+Fecha: ${new Date().toLocaleDateString('es-CL')}
+      `;
+    }
+
+    function generarOrdenExamenes(paciente, examenes) {
+      const listaExamenes = examenes.map(e => '☐ ' + e).join('\n');
+      return `
+${configuracionCliente.nombre}
+${configuracionCliente.especialidad}
+RUT: ${configuracionCliente.rut}
+
+ORDEN DE EXÁMENES PREOPERATORIOS
+
+Paciente: ${paciente.nombre}
+RUT: ${paciente.rut}
+Edad: ${paciente.edad} años
+Fecha: ${new Date().toLocaleDateString('es-CL')}
+
+EXÁMENES SOLICITADOS:
+${listaExamenes}
+
+Procedimiento: ${configuracionCliente.procedimiento}
+
+Autorizo al laboratorio a realizar los exámenes anteriormente descritos.
+
+Firma Paciente: ____________________
+
+---
+${configuracionCliente.firma}
+${configuracionCliente.especialidad}
+      `;
+    }
+
+    function generarOrdenEKG(paciente) {
+      return `
+${configuracionCliente.nombre}
+${configuracionCliente.especialidad}
+RUT: ${configuracionCliente.rut}
+
+ORDEN DE ELECTROCARDIOGRAMA
+
+Paciente: ${paciente.nombre}
+RUT: ${paciente.rut}
+Edad: ${paciente.edad} años
+Fecha: ${new Date().toLocaleDateString('es-CL')}
+
+EXAMEN SOLICITADO:
+☐ Electrocardiograma
+
+Indicaciones: Preoperatorio para ${configuracionCliente.procedimiento}
+
+Observaciones: ________________________________________
+
+---
+${configuracionCliente.firma}
+${configuracionCliente.especialidad}
+      `;
+    }
+
+    function limpiarOrdenes() {
+      document.getElementById('formEnviarOrdenes').reset();
+      document.getElementById('resultado-ordenes').style.display = 'none';
+      document.getElementById('eo-message').innerHTML = '';
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // IMPORTAR PACIENTES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    let pacientesParaImportar = [];
+
+    function procesarArchivoImportacion() {
+      const archivo = document.getElementById('imp-archivo').files[0];
+      if (!archivo) {
+        document.getElementById('imp-message').innerHTML = '<p class="error">❌ Selecciona un archivo</p>';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const datos = e.target.result;
+          const lineas = datos.split('\n').filter(l => l.trim());
+          pacientesParaImportar = parsearDatos(lineas);
+          mostrarPreviewImportacion();
+        } catch (err) {
+          document.getElementById('imp-message').innerHTML = '<p class="error">❌ Error al procesar archivo: ' + err.message + '</p>';
+        }
+      };
+      reader.readAsText(archivo);
+    }
+
+    function procesarDatosImportacion() {
+      const datos = document.getElementById('imp-datos').value;
+      if (!datos.trim()) {
+        document.getElementById('imp-message').innerHTML = '<p class="error">❌ Pega datos en el campo de texto</p>';
+        return;
+      }
+
+      const lineas = datos.split('\n').filter(l => l.trim());
+      pacientesParaImportar = parsearDatos(lineas);
+      mostrarPreviewImportacion();
+    }
+
+    function parsearDatos(lineas) {
+      return lineas.slice(1).map(linea => {
+        const campos = linea.split('\t');
+        return {
+          nombre: campos[0]?.trim() || '',
+          rut: campos[1]?.trim() || '',
+          edad: parseInt(campos[2]) || 0,
+          prevision: campos[3]?.trim() || 'Otra',
+          correo: campos[4]?.trim() || '',
+          telefono: campos[5]?.trim() || '',
+          etapa: 'Presupuesto solicitado',
+          temperatura: 'Tibio',
+          notas: '[' + new Date().toLocaleDateString() + '] Importado en lote'
+        };
+      }).filter(p => p.nombre && p.rut);
+    }
+
+    function mostrarPreviewImportacion() {
+      const tbody = document.getElementById('tbody-preview-importacion');
+      tbody.innerHTML = '';
+
+      pacientesParaImportar.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.nombre}</td>
+          <td>${p.rut}</td>
+          <td>${p.edad}</td>
+          <td>${p.prevision}</td>
+          <td><span class="badge badge-primary">Nuevo</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('imp-preview').style.display = 'block';
+      document.getElementById('imp-message').innerHTML = '<p class="success">✅ ' + pacientesParaImportar.length + ' paciente(s) listos para importar</p>';
+    }
+
+    function confirmarImportacion() {
+      let duplicados = 0;
+      let importados = 0;
+
+      pacientesParaImportar.forEach(p => {
+        const existe = pacientes.find(ex => ex.rut === p.rut);
+        if (existe) {
+          duplicados++;
+        } else {
+          pacientes.push(p);
+          importados++;
+        }
+      });
+
+      localStorage.setItem('pacientes', JSON.stringify(pacientes));
+      document.getElementById('imp-message').innerHTML = '<p class="success">✅ Importación completada: ' + importados + ' agregados, ' + duplicados + ' duplicados</p>';
+
+      setTimeout(() => {
+        limpiarImportacion();
+        cargarDashboard();
+        cargarPacientes();
+      }, 2000);
+    }
+
+    function limpiarImportacion() {
+      document.getElementById('formImportacion').reset?.() || (document.getElementById('imp-datos').value = '');
+      document.getElementById('imp-archivo').value = '';
+      document.getElementById('imp-preview').style.display = 'none';
+      document.getElementById('imp-message').innerHTML = '';
+      pacientesParaImportar = [];
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // BONO PAD - PRESTADORES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // BASE DE DATOS BONO PAD — PRESTACIONES CON DIAGNÓSTICOS
+    const prestacionesBonoPad = {
+      "1902076": {
+        codigo: "1902076",
+        nombre: "Vasectomía",
+        especialidad: "Urología",
+        cobertura: "100%",
+        examenesBase: ["Hemograma", "TP-TTP", "Glicemia", "Creatinina"],
+        requiresEKG_age: 40,
+        requiresEKG_hta: true,
+        diagnosticos: [
+          {
+            codigo_cie10: "Z98.52",
+            descripcion: "Esterilidad masculina post-vasectomía"
+          }
+        ]
+      },
+      "1902070": {
+        codigo: "1902070",
+        nombre: "Circuncisión",
+        especialidad: "Urología",
+        cobertura: "100%",
+        examenesBase: ["Hemograma", "TP-TTP", "Glicemia"],
+        requiresEKG_age: 40,
+        requiresEKG_hta: true,
+        diagnosticos: [
+          {
+            codigo_cie10: "N47",
+            descripcion: "Fimosis"
+          },
+          {
+            codigo_cie10: "N47.1",
+            descripcion: "Fimosis infeccioso"
+          }
+        ]
+      },
+      "1912345": {
+        codigo: "1912345",
+        nombre: "Abdominoplastia",
+        especialidad: "Cirugía Plástica",
+        cobertura: "75% (hasta UF 200)",
+        examenesBase: ["Hemograma", "TP-TTP", "Glicemia", "Creatinina", "Albumina"],
+        requiresEKG_age: 40,
+        requiresEKG_hta: true,
+        requiresRxTorax: true,
+        diagnosticos: [
+          {
+            codigo_cie10: "L98.1",
+            descripcion: "Flacidez de piel post-parto"
+          },
+          {
+            codigo_cie10: "L91.0",
+            descripcion: "Cicatriz hipertrófica"
+          }
+        ]
+      },
+      "1904001": {
+        codigo: "1904001",
+        nombre: "Bypass Gástrico",
+        especialidad: "Cirugía Bariátrica",
+        cobertura: "100%",
+        examenesBase: ["Hemograma", "TP-TTP", "Glicemia", "Creatinina", "Albumina", "Hierro", "B12", "TSH"],
+        requiresEKG_age: 35,
+        requiresEKG_hta: true,
+        requiresRxTorax: true,
+        requiresEcocardiograma: true,
+        diagnosticos: [
+          {
+            codigo_cie10: "E66.0",
+            descripcion: "Obesidad mórbida"
+          },
+          {
+            codigo_cie10: "E66.1",
+            descripcion: "Obesidad severa con complicaciones"
+          }
+        ]
+      },
+      "1904002": {
+        codigo: "1904002",
+        nombre: "Manga Gástrica",
+        especialidad: "Cirugía Bariátrica",
+        cobertura: "100%",
+        examenesBase: ["Hemograma", "TP-TTP", "Glicemia", "Creatinina", "Albumina", "Hierro", "B12"],
+        requiresEKG_age: 35,
+        requiresEKG_hta: true,
+        requiresRxTorax: true,
+        diagnosticos: [
+          {
+            codigo_cie10: "E66.0",
+            descripcion: "Obesidad mórbida"
+          }
+        ]
+      },
+      "1903040": {
+        codigo: "1903040",
+        nombre: "Amigdalectomía",
+        especialidad: "Otorrinolaringología",
+        cobertura: "100%",
+        examenesBase: ["Hemograma", "TP-TTP", "Glicemia"],
+        requiresEKG_age: 40,
+        requiresEKG_hta: true,
+        diagnosticos: [
+          {
+            codigo_cie10: "J35.9",
+            descripcion: "Enfermedad amigdalina no especificada"
+          },
+          {
+            codigo_cie10: "J35.01",
+            descripcion: "Amigdalitis crónica",
+            examenesAdicionales: ["Monocultivo"]
+          }
+        ]
+      }
+    };
+
+    // HELPER: Obtener especialidades únicas
+    function obtenerEspecialidadesBonoPad() {
+      return [...new Set(Object.values(prestacionesBonoPad).map(p => p.especialidad))].sort();
+    }
+
+    // HELPER: Obtener prestaciones por especialidad
+    function obtenerPrestacionesPorEspecialidad(especialidad) {
+      return Object.values(prestacionesBonoPad).filter(p => p.especialidad === especialidad);
+    }
+
+    // HELPER: Obtener diagnósticos por prestación
+    function obtenerDiagnosticosAuxBonoPad(codigoPrestacion) {
+      const prestacion = prestacionesBonoPad[codigoPrestacion];
+      return prestacion ? prestacion.diagnosticos : [];
+    }
+
+    // HELPER: Calcular exámenes según prestación y diagnóstico
+    function calcularExamenesBonoPad(codigoPrestacion, paciente, codigoDiagnostico) {
+      const prestacion = prestacionesBonoPad[codigoPrestacion];
+      if (!prestacion) return [];
+
+      let examenes = [...prestacion.examenesBase];
+
+      // Lógica por edad
+      if (paciente.edad >= prestacion.requiresEKG_age) {
+        if (!examenes.includes("EKG")) examenes.push("EKG");
+      }
+
+      // Lógica por HTA
+      if (prestacion.requiresEKG_hta && paciente.hta === "Sí") {
+        if (!examenes.includes("EKG")) examenes.push("EKG");
+      }
+
+      // Lógica por DM2
+      if (paciente.dm2 === "Sí") {
+        if (!examenes.includes("HbA1c")) examenes.push("HbA1c");
+      }
+
+      // Requerimientos especiales por prestación
+      if (prestacion.requiresRxTorax && !examenes.includes("Rx Tórax")) {
+        examenes.push("Rx Tórax");
+      }
+      if (prestacion.requiresEcocardiograma && !examenes.includes("Ecocardiograma")) {
+        examenes.push("Ecocardiograma");
+      }
+
+      // Exámenes adicionales por diagnóstico
+      if (codigoDiagnostico) {
+        const diagnostico = prestacion.diagnosticos.find(d => d.codigo_cie10 === codigoDiagnostico);
+        if (diagnostico && diagnostico.examenesAdicionales) {
+          diagnostico.examenesAdicionales.forEach(ex => {
+            if (!examenes.includes(ex)) examenes.push(ex);
+          });
+        }
+      }
+
+      return [...new Set(examenes)];
+    }
+
+    function cargarPrestacionesBonoPad() {
+      const especialidad = document.getElementById('bp-especialidad').value;
+      const select = document.getElementById('bp-prestacion');
+      select.innerHTML = '<option value="">-- Selecciona una prestación --</option>';
+
+      if (especialidad && prestacionesBonoPad[especialidad]) {
+        prestacionesBonoPad[especialidad].forEach(p => {
+          const option = document.createElement('option');
+          option.value = p.codigo;
+          option.textContent = p.nombre + ' (' + p.codigo + ')';
+          select.appendChild(option);
+        });
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // BONO PAD INTEGRADO EN ENVIAR ÓRDENES
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    let pacienteActualBonoPad = null;
+    let prestacionActualBonoPad = null;
+
+    function buscarPacienteParaBonoPad() {
+      const buscar = document.getElementById('eo-buscar-pad').value.toLowerCase();
+      pacienteActualBonoPad = pacientes.find(p =>
+        p.rut.includes(buscar) || p.nombre.toLowerCase().includes(buscar)
+      );
+
+      if (!pacienteActualBonoPad) {
+        document.getElementById('eo-message-pad').innerHTML = '<p class="error">❌ Paciente no encontrado</p>';
+        return;
+      }
+
+      const infoTexto = `${pacienteActualBonoPad.nombre} (RUT: ${pacienteActualBonoPad.rut}, ${pacienteActualBonoPad.edad} años) | HTA: ${pacienteActualBonoPad.hta} | DM2: ${pacienteActualBonoPad.dm2}`;
+      document.getElementById('eo-info-paciente').textContent = infoTexto;
+      document.getElementById('eo-resultado-paciente').style.display = 'block';
+      document.getElementById('eo-seccion-prestacion').style.display = 'block';
+
+      // Cargar especialidades en dropdown
+      const especialidadSelect = document.getElementById('eo-especialidad-pad');
+      especialidadSelect.innerHTML = '<option value="">-- Selecciona especialidad --</option>';
+      obtenerEspecialidadesBonoPad().forEach(esp => {
+        const option = document.createElement('option');
+        option.value = esp;
+        option.textContent = esp;
+        especialidadSelect.appendChild(option);
+      });
+
+      document.getElementById('eo-message-pad').innerHTML = '';
+    }
+
+    function cargarPrestacionesBonoPad() {
+      const especialidad = document.getElementById('eo-especialidad-pad').value;
+      const prestacionSelect = document.getElementById('eo-prestacion-pad');
+      prestacionSelect.innerHTML = '<option value="">-- Selecciona prestación --</option>';
+
+      if (!especialidad) return;
+
+      const prestaciones = obtenerPrestacionesPorEspecialidad(especialidad);
+      prestaciones.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.codigo;
+        option.textContent = `${p.nombre} (${p.codigo})`;
+        prestacionSelect.appendChild(option);
+      });
+
+      // Limpiar secciones siguientes
+      document.getElementById('eo-seccion-diagnostico').style.display = 'none';
+      document.getElementById('eo-seccion-examenes').style.display = 'none';
+      document.getElementById('eo-seccion-botones').style.display = 'none';
+    }
+
+    function cargarDiagnosticoBonoPad() {
+      const codigoPrestacion = document.getElementById('eo-prestacion-pad').value;
+
+      if (!codigoPrestacion) {
+        document.getElementById('eo-seccion-diagnostico').style.display = 'none';
+        document.getElementById('eo-seccion-examenes').style.display = 'none';
+        document.getElementById('eo-seccion-botones').style.display = 'none';
+        return;
+      }
+
+      prestacionActualBonoPad = prestacionesBonoPad[codigoPrestacion];
+      const diagnosticos = obtenerDiagnosticosAuxBonoPad(codigoPrestacion);
+
+      const diagnosticoSelect = document.getElementById('eo-diagnostico-pad');
+      diagnosticoSelect.innerHTML = '<option value="">-- Selecciona diagnóstico --</option>';
+
+      diagnosticos.forEach(d => {
+        const option = document.createElement('option');
+        option.value = d.codigo_cie10;
+        option.textContent = `${d.codigo_cie10} - ${d.descripcion}`;
+        diagnosticoSelect.appendChild(option);
+      });
+
+      document.getElementById('eo-seccion-diagnostico').style.display = 'block';
+
+      // Cargar exámenes automáticamente
+      actualizarExamenesBonoPad();
+    }
+
+    function actualizarExamenesBonoPad() {
+      if (!pacienteActualBonoPad || !prestacionActualBonoPad) return;
+
+      const codigoPrestacion = prestacionActualBonoPad.codigo;
+      const codigoDiagnostico = document.getElementById('eo-diagnostico-pad').value;
+
+      const examenes = calcularExamenesBonoPad(codigoPrestacion, pacienteActualBonoPad, codigoDiagnostico);
+
+      const container = document.getElementById('eo-examenes-container');
+      container.innerHTML = `
+        <p style="font-weight: 600; margin-bottom: 10px;">📋 Exámenes Preoperatorios:</p>
+        ${examenes.map(e => `<div style="padding: 5px 0;">☑ ${e}</div>`).join('')}
+      `;
+
+      document.getElementById('eo-seccion-examenes').style.display = 'block';
+      document.getElementById('eo-seccion-botones').style.display = 'block';
+    }
+
+    document.addEventListener('change', function(e) {
+      if (e.target.id === 'eo-diagnostico-pad') {
+        actualizarExamenesBonoPad();
+      }
+    });
+
+    function handleEnviarOrdenesBonoPad(e) {
+      e.preventDefault();
+
+      if (!pacienteActualBonoPad || !prestacionActualBonoPad) {
+        document.getElementById('eo-message-pad').innerHTML = '<p class="error">⚠️ Completa todos los campos</p>';
+        return;
+      }
+
+      const codigoPrestacion = prestacionActualBonoPad.codigo;
+      const codigoDiagnostico = document.getElementById('eo-diagnostico-pad').value;
+      const examenes = calcularExamenesBonoPad(codigoPrestacion, pacienteActualBonoPad, codigoDiagnostico);
+
+      const diagnostico = prestacionActualBonoPad.diagnosticos.find(d => d.codigo_cie10 === codigoDiagnostico);
+
+      let documentosEnviados = JSON.parse(localStorage.getItem('documentosEnviados')) || [];
+      const ahora = new Date().toLocaleString('es-CL');
+
+      documentosEnviados.push({
+        paciente: pacienteActualBonoPad.nombre,
+        rut: pacienteActualBonoPad.rut,
+        tipo: `Orden de Exámenes (Bono PAD - ${prestacionActualBonoPad.nombre})`,
+        fecha: ahora,
+        estado: 'Enviado',
+        codigoPrestacion: codigoPrestacion,
+        prestacionNombre: prestacionActualBonoPad.nombre,
+        diagnosticoCodigo: codigoDiagnostico,
+        diagnosticoDescripcion: diagnostico?.descripcion || '',
+        examenes: examenes,
+        contenido: generarOrdenExamenesBonoPad(pacienteActualBonoPad, prestacionActualBonoPad, diagnostico, examenes)
+      });
+
+      localStorage.setItem('documentosEnviados', JSON.stringify(documentosEnviados));
+
+      pacienteActualBonoPad.etapa = 'Órdenes enviadas';
+      localStorage.setItem('pacientes', JSON.stringify(pacientes));
+
+      document.getElementById('eo-message-pad').innerHTML = '<p class="success">✅ Orden generada exitosamente (Bono PAD)</p>';
+      setTimeout(() => {
+        limpiarOrdenesBonoPad();
+        cargarDocumentos();
+      }, 2000);
+    }
+
+    function generarOrdenExamenesBonoPad(paciente, prestacion, diagnostico, examenes) {
+      const listaExamenes = examenes.map(e => '☐ ' + e).join('\n');
+      return `
+${configuracionCliente.nombre}
+${configuracionCliente.especialidad}
+RUT: ${configuracionCliente.rut}
+
+ORDEN DE EXÁMENES PREOPERATORIOS
+BONO PAD — Código ${prestacion.codigo}
+
+Paciente: ${paciente.nombre}
+RUT: ${paciente.rut}
+Edad: ${paciente.edad} años
+Fecha: ${new Date().toLocaleDateString('es-CL')}
+
+PRESTACIÓN BONO PAD
+Nombre: ${prestacion.nombre}
+Código: ${prestacion.codigo}
+Cobertura: ${prestacion.cobertura}
+
+DIAGNÓSTICO PRINCIPAL (CIE-10)
+Código: ${diagnostico?.codigo_cie10 || ''}
+Descripción: ${diagnostico?.descripcion || ''}
+
+EXÁMENES SOLICITADOS:
+${listaExamenes}
+
+Procedimiento: ${prestacion.nombre} (Bono PAD)
+
+Autorizo al laboratorio a realizar los exámenes anteriormente descritos.
+
+Firma Paciente: ____________________
+
+─────────────────────────────────────────────────────────
+${configuracionCliente.firma}
+${configuracionCliente.especialidad}
+RUT: ${configuracionCliente.rut}
+
+Fecha: ${new Date().toLocaleDateString('es-CL')}
+      `;
+    }
+
+    function limpiarOrdenesBonoPad() {
+      document.getElementById('eo-buscar-pad').value = '';
+      document.getElementById('eo-resultado-paciente').style.display = 'none';
+      document.getElementById('eo-seccion-prestacion').style.display = 'none';
+      document.getElementById('eo-seccion-diagnostico').style.display = 'none';
+      document.getElementById('eo-seccion-examenes').style.display = 'none';
+      document.getElementById('eo-seccion-botones').style.display = 'none';
+      document.getElementById('eo-message-pad').innerHTML = '';
+      pacienteActualBonoPad = null;
+      prestacionActualBonoPad = null;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DOCUMENTOS ENVIADOS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function cargarDocumentos() {
+      const documentos = JSON.parse(localStorage.getItem('documentosEnviados')) || [];
+      const tbody = document.getElementById('tbody-documentos');
+      tbody.innerHTML = '';
+
+      if (documentos.length === 0) {
+        document.getElementById('doc-message').textContent = 'No hay documentos enviados aún';
+        return;
+      }
+
+      document.getElementById('doc-message').textContent = '';
+      documentos.forEach((doc, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${doc.paciente}</strong></td>
+          <td>${doc.tipo}</td>
+          <td>${doc.fecha}</td>
+          <td><span class="badge badge-primary">${doc.estado}</span></td>
+          <td>
+            <button class="btn" style="padding: 5px 10px; font-size: 12px;" onclick="reenviarDocumento(${idx})">🔄 Reenviar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function reenviarDocumento(idx) {
+      const documentos = JSON.parse(localStorage.getItem('documentosEnviados')) || [];
+      const doc = documentos[idx];
+      alert('📤 Reenviando: ' + doc.tipo + ' a ' + doc.paciente);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CONFIGURACIÓN DEL CLIENTE
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function cargarConfiguracion() {
+      document.getElementById('cfg-nombre').value = configuracionCliente.nombre;
+      document.getElementById('cfg-especialidad').value = configuracionCliente.especialidad;
+      document.getElementById('cfg-rut').value = configuracionCliente.rut;
+      document.getElementById('cfg-procedimiento').value = configuracionCliente.procedimiento;
+      document.getElementById('cfg-correo').value = configuracionCliente.correo;
+      document.getElementById('cfg-telefono').value = configuracionCliente.telefono;
+      document.getElementById('cfg-firma').value = configuracionCliente.firma;
+      document.getElementById('cfg-logo').value = configuracionCliente.logo;
+      document.getElementById('cfg-examenes').value = configuracionCliente.examenesBase.join(', ');
+    }
+
+    function guardarConfiguracion(e) {
+      e.preventDefault();
+
+      configuracionCliente = {
+        nombre: document.getElementById('cfg-nombre').value,
+        especialidad: document.getElementById('cfg-especialidad').value,
+        rut: document.getElementById('cfg-rut').value,
+        procedimiento: document.getElementById('cfg-procedimiento').value,
+        correo: document.getElementById('cfg-correo').value,
+        telefono: document.getElementById('cfg-telefono').value,
+        firma: document.getElementById('cfg-firma').value,
+        logo: document.getElementById('cfg-logo').value,
+        examenesBase: document.getElementById('cfg-examenes').value.split(',').map(e => e.trim())
+      };
+
+      localStorage.setItem('configuracionCliente', JSON.stringify(configuracionCliente));
+      document.getElementById('cfg-message').innerHTML = '<p class="success">✅ Configuración guardada exitosamente</p>';
+
+      setTimeout(() => {
+        document.getElementById('cfg-message').innerHTML = '';
+        cargarDashboard();
+      }, 2000);
+    }
+
+    function resetearConfiguracion() {
+      cargarConfiguracion();
+      document.getElementById('cfg-message').innerHTML = '<p style="color: #999;">Valores restaurados</p>';
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SETUP DE UN CLICK (FIRST TIME)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    function completarSetup(e) {
+      e.preventDefault();
+
+      const nombre = document.getElementById('setup-nombre').value;
+      const especialidad = document.getElementById('setup-especialidad').value;
+      const rut = document.getElementById('setup-rut').value;
+      const procedimiento = document.getElementById('setup-procedimiento').value;
+      const correo = document.getElementById('setup-correo').value;
+      const password = document.getElementById('setup-password').value;
+
+      if (password.length < 6) {
+        document.getElementById('setup-error').textContent = '⚠️ La contraseña debe tener mínimo 6 caracteres';
+        return;
+      }
+
+      // Guardar configuración
+      configuracionCliente = {
+        nombre: nombre,
+        especialidad: especialidad,
+        rut: rut,
+        procedimiento: procedimiento,
+        correo: correo,
+        telefono: '+56912345678',
+        firma: nombre,
+        logo: '🩺',
+        examenesBase: ['Hemograma', 'TP - TTP', 'Glicemia', 'Creatinina']
+      };
+
+      localStorage.setItem('configuracionCliente', JSON.stringify(configuracionCliente));
+      localStorage.setItem('usuarioSetup', JSON.stringify({ email: correo, password: password }));
+
+      // Mostrar confirmación
+      document.getElementById('setup-error').innerHTML = '<p class="success">✅ ¡Setup completado! Iniciando sesión...</p>';
+
+      setTimeout(() => {
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'block';
+
+        // Pre-llenar login
+        document.getElementById('email').value = correo;
+        document.getElementById('password').value = password;
+      }, 1500);
+    }
+
+    // Verificar login y setup
+    window.addEventListener('load', function() {
+      const usuario = localStorage.getItem('usuario');
+      const esFirstTime = !localStorage.getItem('usuarioSetup');
+
+      if (esFirstTime && !usuario) {
+        // Primera vez - mostrar setup
+        document.getElementById('setup-screen').style.display = 'block';
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard-content').style.display = 'none';
+      } else if (!usuario) {
+        // Setup completado pero no logueado
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'block';
+        document.getElementById('dashboard-content').style.display = 'none';
+      } else {
+        // Ya logueado
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard-content').style.display = 'block';
+        document.getElementById('user-email').textContent = usuario;
+        inicializar();
+      }
+    });
+  </script>
+</body>
+</html>

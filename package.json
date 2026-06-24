@@ -1,0 +1,11 @@
+{
+  "name": "triage-engine-prod",
+  "version": "3.0.0",
+  "description": "Triage Engine CRM — Multi-tenant para cirugía electiva",
+  "scripts": {
+    "dev": "http-server -p 3000 -c-1",
+    "build": "echo 'No build needed for static app'",
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}
