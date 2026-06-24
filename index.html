@@ -2192,19 +2192,17 @@ Fecha: ${new Date().toLocaleDateString('es-CL')}
     // Verificar login y setup
     window.addEventListener('load', function() {
       const usuario = localStorage.getItem('usuario');
-      const esFirstTime = !localStorage.getItem('usuarioSetup');
-
-      if (esFirstTime && !usuario) {
-        // Primera vez - mostrar setup
-        // MULTI-TENANT LOGIN
-    // Esperar a que database.js esté listo
-    setTimeout(() => {
+      // MULTI-TENANT LOGIN
       const usuarioActualId = localStorage.getItem('usuario_actual');
+
       if (!usuarioActualId) {
         // No hay usuario logueado: mostrar selector
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('dashboard-content').style.display = 'none';
-        cargarListaUsuarios();
+        // Esperar a que database.js esté listo
+        setTimeout(() => {
+          cargarListaUsuarios();
+        }, 200);
       } else {
         // Usuario logueado: mostrar dashboard
         document.getElementById('login-screen').style.display = 'none';
@@ -2215,16 +2213,24 @@ Fecha: ${new Date().toLocaleDateString('es-CL')}
         }
         inicializar();
       }
-    }, 100);
   });
 
   function cargarListaUsuarios() {
+    console.log('[cargarListaUsuarios] Iniciando...');
+
     const container = document.getElementById('usuarios-list');
-    if (!container) return;
+    if (!container) {
+      console.error('[cargarListaUsuarios] No encontré container usuarios-list');
+      return;
+    }
+
     container.innerHTML = '';
+    console.log('[cargarListaUsuarios] Container limpiado');
 
     // Admin
     const admin = DB.getAdmin();
+    console.log('[cargarListaUsuarios] Admin:', admin);
+
     if (admin) {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -2235,11 +2241,14 @@ Fecha: ${new Date().toLocaleDateString('es-CL')}
         loginUsuario('admin');
       };
       container.appendChild(btn);
+      console.log('[cargarListaUsuarios] Botón Admin agregado');
     }
 
     // Doctores
     const doctores = DB.getTodosLosUsuarios();
-    doctores.forEach(doc => {
+    console.log('[cargarListaUsuarios] Doctores:', doctores.length);
+
+    doctores.forEach((doc, idx) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'usuario-btn usuario-btn-doctor';
@@ -2249,7 +2258,10 @@ Fecha: ${new Date().toLocaleDateString('es-CL')}
         loginUsuario(doc.id);
       };
       container.appendChild(btn);
+      console.log(`[cargarListaUsuarios] Botón doctor ${idx + 1} agregado: ${doc.nombre}`);
     });
+
+    console.log('[cargarListaUsuarios] ✅ COMPLETADO');
   }
 
   function loginUsuario(usuarioId) {
