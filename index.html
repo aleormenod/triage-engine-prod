@@ -2193,6 +2193,13 @@ Fecha: ${new Date().toLocaleDateString('es-CL')}
     window.addEventListener('load', function() {
       const usuario = localStorage.getItem('usuario');
       // MULTI-TENANT LOGIN
+      // Asegurar que database.js se inicializó
+      if (typeof DB === 'undefined') {
+        console.error('DB no definido, esperando...');
+        setTimeout(() => location.reload(), 500);
+        return;
+      }
+
       const usuarioActualId = localStorage.getItem('usuario_actual');
 
       if (!usuarioActualId) {
@@ -2201,8 +2208,12 @@ Fecha: ${new Date().toLocaleDateString('es-CL')}
         document.getElementById('dashboard-content').style.display = 'none';
         // Esperar a que database.js esté listo
         setTimeout(() => {
-          cargarListaUsuarios();
-        }, 200);
+          if (typeof cargarListaUsuarios === 'function') {
+            cargarListaUsuarios();
+          } else {
+            console.error('cargarListaUsuarios no disponible');
+          }
+        }, 300);
       } else {
         // Usuario logueado: mostrar dashboard
         document.getElementById('login-screen').style.display = 'none';
